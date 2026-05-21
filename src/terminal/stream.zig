@@ -125,6 +125,7 @@ pub const Action = union(Key) {
     kitty_color_report: kitty.color.OSC,
     color_operation: ColorOperation,
     semantic_prompt: SemanticPrompt,
+    emacs_shell: EmacsShell,
 
     pub const Key = lib.Enum(
         lib.target,
@@ -222,6 +223,7 @@ pub const Action = union(Key) {
             "kitty_color_report",
             "color_operation",
             "semantic_prompt",
+            "emacs_shell",
         },
     );
 
@@ -328,6 +330,16 @@ pub const Action = union(Key) {
 
         pub fn cval(self: ReportPwd) ReportPwd.C {
             return .init(self.url);
+        }
+    };
+
+    pub const EmacsShell = struct {
+        payload: []const u8,
+
+        pub const C = lib.String;
+
+        pub fn cval(self: EmacsShell) EmacsShell.C {
+            return .init(self.payload);
         }
     };
 
@@ -2045,6 +2057,10 @@ pub fn Stream(comptime H: type) type {
 
                 .conemu_progress_report => |v| {
                     self.handler.vt(.progress_report, v);
+                },
+
+                .emacs_shell => |v| {
+                    self.handler.vt(.emacs_shell, .{ .payload = v });
                 },
 
                 .conemu_sleep,

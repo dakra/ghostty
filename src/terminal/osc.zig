@@ -151,6 +151,11 @@ pub const Command = union(Key) {
     /// ConEmu comment (OSC 9;11)
     conemu_comment: [:0]const u8,
 
+    /// OSC 51, reserved by xterm "for Emacs shell".  No sub-protocol is
+    /// defined beyond the reservation: the payload is captured raw and
+    /// the embedding application decides what to do with it.
+    emacs_shell: [:0]const u8,
+
     /// Kitty text sizing protocol (OSC 66)
     kitty_text_sizing: parsers.kitty_text_sizing.OSC,
 
@@ -190,6 +195,7 @@ pub const Command = union(Key) {
             "conemu_output_environment_variable",
             "conemu_xterm_emulation",
             "conemu_comment",
+            "emacs_shell",
             "kitty_text_sizing",
             "kitty_clipboard_protocol",
             "context_signal",
@@ -341,6 +347,7 @@ pub const Parser = struct {
         @"19",
         @"21",
         @"22",
+        @"51",
         @"52",
         @"55",
         @"66",
@@ -412,6 +419,7 @@ pub const Parser = struct {
             .conemu_sleep,
             .conemu_wait_input,
             .conemu_xterm_emulation,
+            .emacs_shell,
             .hyperlink_end,
             .hyperlink_start,
             .invalid,
@@ -667,6 +675,7 @@ pub const Parser = struct {
 
             .@"5" => switch (c) {
                 ';' => if (self.ensureAllocator()) self.captureTrailing(.fixed),
+                '1' => self.state = .@"51",
                 '2' => self.state = .@"52",
                 '5' => self.state = .@"55",
                 else => self.state = .invalid,
@@ -677,6 +686,7 @@ pub const Parser = struct {
                 else => self.state = .invalid,
             },
 
+            .@"51",
             .@"52",
             .@"66",
             => switch (c) {
@@ -789,6 +799,8 @@ pub const Parser = struct {
             .@"21" => parsers.kitty_color.parse(self, terminator_ch),
 
             .@"22" => parsers.mouse_shape.parse(self, terminator_ch),
+
+            .@"51" => parsers.emacs_shell.parse(self, terminator_ch),
 
             .@"52" => parsers.clipboard_operation.parse(self, terminator_ch),
 
